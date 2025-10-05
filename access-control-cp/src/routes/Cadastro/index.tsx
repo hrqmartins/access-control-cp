@@ -1,12 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-
-type FormValues = {
-  nome: string;
-  nomeUsuario: string;
-  email: string;
-};
+import type { TipoUsuario } from "../../types/tipoUsuario";
 
 const CadastroPage: React.FC = () => {
   const {
@@ -14,27 +9,49 @@ const CadastroPage: React.FC = () => {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ mode: "onTouched" });
+  } = useForm<TipoUsuario>({ mode: "onTouched" });
 
   const navigate = useNavigate();
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: TipoUsuario) => {
     try {
-      console.log("Cadastrando usuário:", data);
+      const response = await fetch(
+        `http://localhost:3001/usuarios?nomeUsuario=${data.nomeUsuario}&email=${data.email}`
+      );
+      const existingUsers = await response.json();
+
+      if (existingUsers.length > 0) {
+        setError("root", {
+          type: "manual",
+          message: "Nome de usuário ou email já cadastrado.",
+        });
+        return;
+      }
+
+      await fetch("http://localhost:3001/usuarios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
       navigate("/login");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      setError("nome", { type: "manual", message: "Erro no cadastro. Tente novamente." });
+      setError("root", {
+        type: "manual",
+        message: "Erro no cadastro. Tente novamente mais tarde.",
+      });
     }
   };
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex justify-center items-center bg-gray-100 p-8">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-xl font-bold text-gray-900 text-center mb-6">Criar Conta</h2>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-4">
+        <h2 className="text-xl font-bold text-gray-900 text-center mb-6">
+          Criar Conta
+        </h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col">
               <label className="font-medium text-gray-700">Nome completo</label>
@@ -47,11 +64,15 @@ const CadastroPage: React.FC = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-800"
               />
               {errors.nome && (
-                <p className="text-red-500 text-sm mt-1">{errors.nome.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.nome.message}
+                </p>
               )}
             </div>
             <div className="flex flex-col">
-              <label className="font-medium text-gray-700">Nome de usuário</label>
+              <label className="font-medium text-gray-700">
+                Nome de usuário
+              </label>
               <input
                 {...register("nomeUsuario", {
                   required: "Nome de usuário é obrigatório",
@@ -61,7 +82,9 @@ const CadastroPage: React.FC = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-800"
               />
               {errors.nomeUsuario && (
-                <p className="text-red-500 text-sm mt-1">{errors.nomeUsuario.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.nomeUsuario.message}
+                </p>
               )}
             </div>
             <div className="flex flex-col">
@@ -69,16 +92,28 @@ const CadastroPage: React.FC = () => {
               <input
                 {...register("email", {
                   required: "Email é obrigatório",
-                  pattern: { value: /\S+@\S+\.\S+/, message: "Email inválido" },
+                  pattern: {
+                    value: /\S+@\S+\.\S+/,
+                    message: "Email inválido",
+                  },
                 })}
                 placeholder="email@exemplo.com"
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-800"
               />
               {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.email.message}
+                </p>
               )}
             </div>
           </div>
+
+          {errors.root && (
+            <p className="text-red-500 text-sm mt-1 text-center">
+              {errors.root.message}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -90,7 +125,8 @@ const CadastroPage: React.FC = () => {
             Já tem uma conta?{" "}
             <span
               onClick={() => navigate("/login")}
-              className="text-blue-900 hover:underline cursor-pointer font-medium">
+              className="text-blue-900 hover:underline cursor-pointer font-medium"
+            >
               Fazer login
             </span>
           </div>
